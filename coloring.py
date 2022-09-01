@@ -290,6 +290,50 @@ def greedy_coloring(e):
         W = W_next
     return c_v
 
+"""
+Reference: https://en.wikipedia.org/wiki/Maximal_independent_set#Random-priority_parallel_algorithm
+"""
+def random_priority_parallel_alg(e):
+    adj_matrix, max_degree, min_degree = compute_max_degree(e)
+    print(f"max degree: {max_degree}")
+    adj_csr = csr_matrix(adj_matrix)
+    row_offsets, col_indices = adj_csr.indptr, adj_csr.indices
+    W_global = [i for i in range(len(e))]  # uncolored vertices
+    color = 0
+    c_v = [-1] * len(e)  # clolors for each vertex
+    while len(W_global) > 0:
+        W =  W_global.copy()   # uncolored vertices
+        I = []
+        while len(W) > 0:
+            rv = np.random.uniform(0, 1, len(W))
+            for i in range(len(W)):
+                v = W[i]
+                s_col, e_col = row_offsets[v], row_offsets[v + 1]
+                neighbor_idx = col_indices[s_col:e_col]
+                flag = True
+                for neighbor in neighbor_idx:
+                    if neighbor in W :
+                        idx = W.index(neighbor)
+                        if  rv[i] > rv[idx]:
+                            flag = False
+                            break
+                if flag:
+                    I.append(v)
+            for v in I:
+                s_col, e_col = row_offsets[v], row_offsets[v + 1]
+                neighbor_idx = col_indices[s_col:e_col]
+                for neighbor in neighbor_idx:
+                    if neighbor in W:
+                        W.remove(neighbor)  
+        # color I in parallel
+        for v in I:
+            c_v[v] = color
+        color += 1
+        # remove I from W_global in parallel
+        for v in I:
+            if v in W_global:
+                W_global.remove(v)
+    return c_v
 
 if __name__ == "__main__":
     """
@@ -314,14 +358,21 @@ if __name__ == "__main__":
     e_color = monte_carlo_coloring(edges)
     print(f"monte carlo coloring: {e_color}")
 
-    # random platte coloring
-    e_color = vivace_coloring(edges)
-    print(f"vivace coloring: {e_color}")
-
     # MIS coloring
     e_color = luby_coloring(edges)
     print(f"luby coloring: {e_color}")
 
+    # random platte coloring
+    e_color = vivace_coloring(edges)
+    print(f"vivace coloring: {e_color}")
+
     # Greedy coloring
     e_color = greedy_coloring(edges)
     print(f"greedy coloring: {e_color}")
+
+    # Random priority parallel algorithm
+    e_color = random_priority_parallel_alg(edges)
+    print(f"random priority parallel algorithm: {e_color}")
+
+
+    
