@@ -2,7 +2,7 @@
 Cloth simulation using Gauss-Seidel solver with GGUI.
 """
 import taichi as ti
-import numpy as np 
+import numpy as np
 
 ti.init(arch=ti.cpu)
 N = 10
@@ -27,7 +27,8 @@ paused = ti.field(ti.i32, shape=())
 def init_pos():
     for i, j in ti.ndrange(N + 1, N + 1):
         idx = i * (N + 1) + j
-        pos[idx] = ti.Vector([i / N, 0.5, j / N])
+        pos[idx] = ti.Vector([i / N, 0.5, j / N]) * 0.9 + ti.Vector(
+            [0.05, 0, 0.05])
         inv_mass[idx] = 1.0
     inv_mass[N] = 0.0
     inv_mass[NV - 1] = 0.0
@@ -126,20 +127,38 @@ def step():
         collision()
     update_vel()
 
+
 def coloring_constant():
     e = edge.to_numpy()
-    from coloring import sequential_greedy_coloring_heuristic
-    c_v = sequential_greedy_coloring_heuristic(e)
-    return c_v 
+    from coloring import sequential_greedy_coloring_heuristic, vivace_coloring, greedy_coloring, monte_carlo_coloring, check_validity
+    func = [
+        sequential_greedy_coloring_heuristic, vivace_coloring, greedy_coloring,
+        monte_carlo_coloring, check_validity
+    ]
+    c_v = func[0](e)
+    print("check validity:", check_validity(e, c_v))
+    return c_v
 
 
 init_pos()
 init_tri()
 init_edge()
 c_v = coloring_constant()
-print(c_v)
-with open('coloring.txt', 'w') as f:
-    f.write(str(c_v))
+print(c_v[220])
+# np.savetxt('data/coloring.txt', c_v)
+with open('data/coloring.txt', 'w') as f:
+    for i in range(len(c_v)):
+        f.write(f"{c_v[i]}\n")
+
+with open('data/edges.txt', 'w') as f:
+    e = edge.to_numpy()
+    for i in range(NE):
+        f.write(str(e[i][0]) + ' ' + str(e[i][1]) + '\n')
+
+with open('data/positions.txt', 'w') as f:
+    p = pos.to_numpy()
+    for i in range(NV):
+        f.write(str(p[i][0]) + ' ' + str(p[i][1]) + ' ' + str(p[i][2]) + '\n')
 
 # window = ti.ui.Window("Display Mesh", (1024, 1024))
 # canvas = window.get_canvas()

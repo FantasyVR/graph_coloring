@@ -290,9 +290,12 @@ def greedy_coloring(e):
         W = W_next
     return c_v
 
+
 """
 Reference: https://en.wikipedia.org/wiki/Maximal_independent_set#Random-priority_parallel_algorithm
 """
+
+
 def random_priority_parallel_alg(e):
     adj_matrix, max_degree, min_degree = compute_max_degree(e)
     print(f"max degree: {max_degree}")
@@ -302,7 +305,7 @@ def random_priority_parallel_alg(e):
     color = 0
     c_v = [-1] * len(e)  # clolors for each vertex
     while len(W_global) > 0:
-        W =  W_global.copy()   # uncolored vertices
+        W = W_global.copy()  # uncolored vertices
         I = []
         while len(W) > 0:
             rv = np.random.uniform(0, 1, len(W))
@@ -312,9 +315,9 @@ def random_priority_parallel_alg(e):
                 neighbor_idx = col_indices[s_col:e_col]
                 flag = True
                 for neighbor in neighbor_idx:
-                    if neighbor in W :
+                    if neighbor in W:
                         idx = W.index(neighbor)
-                        if  rv[i] > rv[idx]:
+                        if rv[i] > rv[idx]:
                             flag = False
                             break
                 if flag:
@@ -324,7 +327,7 @@ def random_priority_parallel_alg(e):
                 neighbor_idx = col_indices[s_col:e_col]
                 for neighbor in neighbor_idx:
                     if neighbor in W:
-                        W.remove(neighbor)  
+                        W.remove(neighbor)
         # color I in parallel
         for v in I:
             c_v[v] = color
@@ -334,6 +337,18 @@ def random_priority_parallel_alg(e):
             if v in W_global:
                 W_global.remove(v)
     return c_v
+
+
+def check_validity(e, c_v):
+    for i in range(len(e) - 1):
+        for j in range(i + 1, len(e)):
+            if e[i][0] == e[j][0] or e[i][1] == e[j][1] or e[i][1] == e[j][
+                    0] or e[i][0] == e[j][1]:
+                if c_v[i] == c_v[j]:
+                    print(f"{i} and {j} are in the same color")
+                    return False
+    return True
+
 
 if __name__ == "__main__":
     """
@@ -373,6 +388,3 @@ if __name__ == "__main__":
     # Random priority parallel algorithm
     e_color = random_priority_parallel_alg(edges)
     print(f"random priority parallel algorithm: {e_color}")
-
-
-    
