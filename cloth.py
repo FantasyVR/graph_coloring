@@ -2,6 +2,7 @@
 Cloth simulation using Gauss-Seidel solver with GGUI.
 """
 import taichi as ti
+import numpy as np
 
 ti.init(arch=ti.cpu)
 N = 10
@@ -26,7 +27,8 @@ paused = ti.field(ti.i32, shape=())
 def init_pos():
     for i, j in ti.ndrange(N + 1, N + 1):
         idx = i * (N + 1) + j
-        pos[idx] = ti.Vector([i / N, 0.5, j / N])
+        pos[idx] = ti.Vector([i / N, 0.5, j / N]) * 0.9 + ti.Vector(
+            [0.05, 0, 0.05])
         inv_mass[idx] = 1.0
     inv_mass[N] = 0.0
     inv_mass[NV - 1] = 0.0
@@ -126,35 +128,63 @@ def step():
     update_vel()
 
 
+def coloring_constant():
+    e = edge.to_numpy()
+    from coloring import sequential_greedy_coloring_heuristic, vivace_coloring, greedy_coloring, monte_carlo_coloring, check_validity
+    func = [
+        sequential_greedy_coloring_heuristic, vivace_coloring, greedy_coloring,
+        monte_carlo_coloring, check_validity
+    ]
+    c_v = func[0](e)
+    print("check validity:", check_validity(e, c_v))
+    return c_v
+
+
 init_pos()
 init_tri()
 init_edge()
+c_v = coloring_constant()
+print(c_v[220])
+# np.savetxt('data/coloring.txt', c_v)
+with open('data/coloring.txt', 'w') as f:
+    for i in range(len(c_v)):
+        f.write(f"{c_v[i]}\n")
 
-window = ti.ui.Window("Display Mesh", (1024, 1024))
-canvas = window.get_canvas()
-scene = ti.ui.Scene()
-camera = ti.ui.make_camera()
-camera.position(0.5, 0.0, 2.5)
-camera.lookat(0.5, 0.5, 0.0)
-camera.fov(90)
+with open('data/edges.txt', 'w') as f:
+    e = edge.to_numpy()
+    for i in range(NE):
+        f.write(str(e[i][0]) + ' ' + str(e[i][1]) + '\n')
 
-paused[None] = 1
-while window.running:
-    for e in window.get_events(ti.ui.PRESS):
-        if e.key in [ti.ui.ESCAPE]:
-            exit()
-    if window.is_pressed(ti.ui.SPACE):
-        paused[None] = not paused[None]
+with open('data/positions.txt', 'w') as f:
+    p = pos.to_numpy()
+    for i in range(NV):
+        f.write(str(p[i][0]) + ' ' + str(p[i][1]) + ' ' + str(p[i][2]) + '\n')
 
-    if not paused[None]:
-        step()
-        paused[None] = not paused[None]
+# window = ti.ui.Window("Display Mesh", (1024, 1024))
+# canvas = window.get_canvas()
+# scene = ti.ui.Scene()
+# camera = ti.ui.make_camera()
+# camera.position(0.5, 0.0, 2.5)
+# camera.lookat(0.5, 0.5, 0.0)
+# camera.fov(90)
 
-    camera.track_user_inputs(window, movement_speed=0.003, hold_key=ti.ui.RMB)
-    scene.set_camera(camera)
-    scene.point_light(pos=(0.5, 1, 2), color=(1, 1, 1))
+# paused[None] = 1
+# while window.running:
+#     for e in window.get_events(ti.ui.PRESS):
+#         if e.key in [ti.ui.ESCAPE]:
+#             exit()
+#     if window.is_pressed(ti.ui.SPACE):
+#         paused[None] = not paused[None]
 
-    scene.mesh(pos, tri, color=(1.0, 1.0, 1.0), two_sided=True)
-    scene.particles(pos, radius=0.01, color=(0.6, 0.0, 0.0))
-    canvas.scene(scene)
-    window.show()
+#     if not paused[None]:
+#         step()
+#         paused[None] = not paused[None]
+
+#     camera.track_user_inputs(window, movement_speed=0.003, hold_key=ti.ui.RMB)
+#     scene.set_camera(camera)
+#     scene.point_light(pos=(0.5, 1, 2), color=(1, 1, 1))
+
+#     scene.mesh(pos, tri, color=(1.0, 1.0, 1.0), two_sided=True)
+#     scene.particles(pos, radius=0.01, color=(0.6, 0.0, 0.0))
+#     canvas.scene(scene)
+#     window.show()
