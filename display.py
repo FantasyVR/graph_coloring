@@ -19,7 +19,7 @@ with open('data/coloring.txt', 'r') as f:
     plt.pie(color_bar,
             labels=[str(i) for i in range(color_spec)],
             autopct='%.2f%%')
-    plt.title("蒙特-卡洛方法颜色分布")  # 设置标题
+    plt.title("Luby 颜色分布")  # 设置标题
     plt.savefig('color_distribution.png')
 
 print(f"check validity: {check_validity(edges, colors)}")

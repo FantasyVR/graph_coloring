@@ -1,11 +1,7 @@
-"""
-Cloth simulation using Gauss-Seidel solver with GGUI.
-"""
 import taichi as ti
-import numpy as np
 
-ti.init(arch=ti.cpu)
-N = 10
+ti.init(arch=ti.vulkan)
+N = 100
 NV = (N + 1)**2
 NT = 2 * N**2
 NE = 2 * N * (N + 1) + N**2
@@ -27,11 +23,10 @@ paused = ti.field(ti.i32, shape=())
 def init_pos():
     for i, j in ti.ndrange(N + 1, N + 1):
         idx = i * (N + 1) + j
-        pos[idx] = ti.Vector([i / N, 0.5, j / N]) * 0.9 + ti.Vector(
-            [0.05, 0, 0.05])
+        pos[idx] = ti.Vector([i / N, 0.5, j / N])
         inv_mass[idx] = 1.0
     inv_mass[N] = 0.0
-    inv_mass[NV - 1] = 0.0
+    inv_mass[NV-1] = 0.0
 
 
 @ti.kernel
@@ -101,9 +96,9 @@ def solve_constraints():
         gradient = dis.normalized()
         l = -constraint / (invM0 + invM1)
         if invM0 != 0.0:
-            pos[idx0] += invM0 * l * gradient
+            pos[idx0] += 0.5 * invM0 * l * gradient
         if invM1 != 0.0:
-            pos[idx1] -= invM1 * l * gradient
+            pos[idx1] -= 0.5 * invM1 * l * gradient
 
 
 @ti.kernel
@@ -112,13 +107,11 @@ def update_vel():
         if inv_mass[i] != 0.0:
             vel[i] = (pos[i] - old_pos[i]) / h
 
-
-@ti.kernel
+@ti.kernel 
 def collision():
     for i in range(NV):
         if pos[i][2] < -2.0:
             pos[i][2] = 0.0
-
 
 def step():
     semi_euler()
@@ -128,54 +121,36 @@ def step():
     update_vel()
 
 
-def save_initial_state():
-    from coloring import graph_coloring
-    c_v = graph_coloring(edge.to_numpy(), 0)
-    with open('data/coloring.txt', 'w') as f:
-        for i in range(len(c_v)):
-            f.write(f"{c_v[i]}\n")
-
-    with open('data/edges.txt', 'w') as f:
-        e = edge.to_numpy()
-        for i in range(NE):
-            f.write(str(e[i][0]) + ' ' + str(e[i][1]) + '\n')
-
-    with open('data/positions.txt', 'w') as f:
-        p = pos.to_numpy()
-        for i in range(NV):
-            f.write(str(p[i][0]) + ' ' + str(p[i][1]) + ' ' + str(p[i][2]) + '\n')
-
-
 init_pos()
 init_tri()
 init_edge()
-save_initial_state()
 
-# window = ti.ui.Window("Display Mesh", (1024, 1024))
-# canvas = window.get_canvas()
-# scene = ti.ui.Scene()
-# camera = ti.ui.make_camera()
-# camera.position(0.5, 0.0, 2.5)
-# camera.lookat(0.5, 0.5, 0.0)
-# camera.fov(90)
+window = ti.ui.Window("Display Mesh", (1024, 1024))
+canvas = window.get_canvas()
+scene = ti.ui.Scene()
+camera = ti.ui.make_camera()
+camera.position(0.5, 0.0, 2.5)
+camera.lookat(0.5, 0.5, 0.0)
+camera.fov(90)
 
-# paused[None] = 1
-# while window.running:
-#     for e in window.get_events(ti.ui.PRESS):
-#         if e.key in [ti.ui.ESCAPE]:
-#             exit()
-#     if window.is_pressed(ti.ui.SPACE):
-#         paused[None] = not paused[None]
+paused[None] = 1
+while window.running:
+    for e in window.get_events(ti.ui.PRESS):
+        if e.key in [ti.ui.ESCAPE]:
+            exit()
+    if window.is_pressed(ti.ui.SPACE):
+        paused[None] = not paused[None]
 
-#     if not paused[None]:
-#         step()
-#         paused[None] = not paused[None]
+    step()
+    # if not paused[None]:
+    #     step()
+    #     paused[None] = not paused[None]
 
-#     camera.track_user_inputs(window, movement_speed=0.003, hold_key=ti.ui.RMB)
-#     scene.set_camera(camera)
-#     scene.point_light(pos=(0.5, 1, 2), color=(1, 1, 1))
+    camera.track_user_inputs(window, movement_speed=0.003, hold_key=ti.ui.RMB)
+    scene.set_camera(camera)
+    scene.point_light(pos=(0.5, 1, 2), color=(1, 1, 1))
 
-#     scene.mesh(pos, tri, color=(1.0, 1.0, 1.0), two_sided=True)
-#     scene.particles(pos, radius=0.01, color=(0.6, 0.0, 0.0))
-#     canvas.scene(scene)
-#     window.show()
+    scene.mesh(pos, tri, color=(1.0,1.0,1.0), two_sided=True)
+    scene.particles(pos, radius=0.01, color=(0.6,0.0,0.0))
+    canvas.scene(scene)
+    window.show()

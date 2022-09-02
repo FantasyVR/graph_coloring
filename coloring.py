@@ -350,6 +350,15 @@ def check_validity(e, c_v):
     return True
 
 
+def graph_coloring(e, algorithm):
+    func = [
+        sequential_greedy_coloring_heuristic, vivace_coloring, greedy_coloring,
+        monte_carlo_coloring, luby_coloring, check_validity
+    ]
+    c_v = func[algorithm](e)
+    print("check validity:", check_validity(e, c_v))
+    return c_v
+
 if __name__ == "__main__":
     """
     0---3---6
