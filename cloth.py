@@ -143,7 +143,8 @@ def save_initial_state():
     with open('data/positions.txt', 'w') as f:
         p = pos.to_numpy()
         for i in range(NV):
-            f.write(str(p[i][0]) + ' ' + str(p[i][1]) + ' ' + str(p[i][2]) + '\n')
+            f.write(
+                str(p[i][0]) + ' ' + str(p[i][1]) + ' ' + str(p[i][2]) + '\n')
 
 
 init_pos()

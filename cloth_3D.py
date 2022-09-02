@@ -26,7 +26,7 @@ def init_pos():
         pos[idx] = ti.Vector([i / N, 0.5, j / N])
         inv_mass[idx] = 1.0
     inv_mass[N] = 0.0
-    inv_mass[NV-1] = 0.0
+    inv_mass[NV - 1] = 0.0
 
 
 @ti.kernel
@@ -107,11 +107,13 @@ def update_vel():
         if inv_mass[i] != 0.0:
             vel[i] = (pos[i] - old_pos[i]) / h
 
-@ti.kernel 
+
+@ti.kernel
 def collision():
     for i in range(NV):
         if pos[i][2] < -2.0:
             pos[i][2] = 0.0
+
 
 def step():
     semi_euler()
@@ -150,7 +152,7 @@ while window.running:
     scene.set_camera(camera)
     scene.point_light(pos=(0.5, 1, 2), color=(1, 1, 1))
 
-    scene.mesh(pos, tri, color=(1.0,1.0,1.0), two_sided=True)
-    scene.particles(pos, radius=0.01, color=(0.6,0.0,0.0))
+    scene.mesh(pos, tri, color=(1.0, 1.0, 1.0), two_sided=True)
+    scene.particles(pos, radius=0.01, color=(0.6, 0.0, 0.0))
     canvas.scene(scene)
     window.show()

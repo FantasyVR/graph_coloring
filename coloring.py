@@ -1,20 +1,32 @@
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, coo_matrix
 
 
 def compute_max_degree(edges):
-    adj_matrix = np.zeros((len(edges), len(edges)), dtype=np.int32)
+    row_idx = []
+    col_idx = []
+    values = []
     for i in range(len(edges) - 1):
         for j in range(i + 1, len(edges)):
             e1, e2 = edges[i], edges[j]
             if e1[0] == e2[0] or e1[0] == e2[1] or e1[1] == e2[0] or e1[
                     1] == e2[1]:
-                adj_matrix[i][j] = 1
-                adj_matrix[j][i] = 1
-    non_zeros = np.count_nonzero(adj_matrix, axis=1)
-    max_degree = np.max(non_zeros)
-    min_degree = np.min(non_zeros)
-    return adj_matrix, max_degree, min_degree
+                row_idx.append(i)
+                col_idx.append(j)
+                row_idx.append(j)
+                col_idx.append(i)
+                values.append(1)
+                values.append(1)
+    adj_matrix = coo_matrix((values, (row_idx, col_idx)),
+                            shape=(len(edges), len(edges)),
+                            dtype=np.int32)
+    adj_csr = adj_matrix.tocsr()
+    degree = np.zeros(len(edges), dtype=np.int32)
+    for i in range(len(edges)):
+        degree[i] = adj_csr.indptr[i + 1] - adj_csr.indptr[i]
+    max_degree = np.max(degree)
+    min_degree = np.min(degree)
+    return adj_csr, max_degree, min_degree
 
 
 """
@@ -23,9 +35,8 @@ Reference: Fig.2 of A PARALLEL GRAPH COLORING HEURISTICR, Mark T. Jones and Paul
 
 
 def monte_carlo_coloring(e):
-    adj_matrix, max_degree, min_degree = compute_max_degree(e)
+    adj_csr, max_degree, min_degree = compute_max_degree(e)
     print(f"max degree: {max_degree}")
-    adj_csr = csr_matrix(adj_matrix)
     row_offsets, col_indices = adj_csr.indptr, adj_csr.indices
     V = [i for i in range(len(e))]  # uncolored vertices
     color = 0
@@ -70,9 +81,8 @@ https://en.wikipedia.org/wiki/Maximal_independent_set
 
 
 def luby_coloring(e):
-    adj_matrix, max_degree, min_degree = compute_max_degree(e)
+    adj_csr, max_degree, min_degree = compute_max_degree(e)
     print(f"max degree: {max_degree}")
-    adj_csr = csr_matrix(adj_matrix)
     row_offsets, col_indices = adj_csr.indptr, adj_csr.indices
     V_global = [i for i in range(len(e))]  # uncolored vertices
     color = 0
@@ -120,9 +130,8 @@ def luby_coloring(e):
 
 
 def luby_MIS(e):
-    adj_matrix, max_degree, min_degree = compute_max_degree(e)
+    adj_csr, max_degree, min_degree = compute_max_degree(e)
     print(f"max degree: {max_degree}")
-    adj_csr = csr_matrix(adj_matrix)
     row_offsets, col_indices = adj_csr.indptr, adj_csr.indices
     V = [i for i in range(len(e))]  # uncolored vertices
     I = []
@@ -164,9 +173,8 @@ Reference: A Simple Parallel Algorithm for the Maximal Independent Set Problem. 
 
 
 def sequential_greedy_coloring_heuristic(e):
-    adj_matrix, max_degree, min_degree = compute_max_degree(e)
+    adj_csr, max_degree, min_degree = compute_max_degree(e)
     print(f"max degree: {max_degree}")
-    adj_csr = csr_matrix(adj_matrix)
     row_offsets, col_indices = adj_csr.indptr, adj_csr.indices
     color_sets = [i for i in range(max_degree + 1)]
     e_color = [-1] * len(e)  # init edge color as -1
@@ -194,9 +202,8 @@ Reference: Vivace: a Practical Gauss-Seidel Method for Stable Soft Body Dynamics
 
 
 def vivace_coloring(e):
-    adj_matrix, max_degree, min_degree = compute_max_degree(e)
+    adj_csr, max_degree, min_degree = compute_max_degree(e)
     print(f"max degree: {max_degree}")
-    adj_csr = csr_matrix(adj_matrix)
     row_offsets, col_indices = adj_csr.indptr, adj_csr.indices
     # Initialization
     U = [i for i in range(len(e))]  # uncolored vertices
@@ -259,9 +266,8 @@ Multicore Architectures
 
 
 def greedy_coloring(e):
-    adj_matrix, max_degree, min_degree = compute_max_degree(e)
+    adj_csr, max_degree, min_degree = compute_max_degree(e)
     print(f"max degree: {max_degree}")
-    adj_csr = csr_matrix(adj_matrix)
     row_offsets, col_indices = adj_csr.indptr, adj_csr.indices
     c_v = [-1] * len(e)  # clolors for each vertex
     W = [i for i in range(len(e))]  # uncolored vertices
@@ -297,9 +303,8 @@ Reference: https://en.wikipedia.org/wiki/Maximal_independent_set#Random-priority
 
 
 def random_priority_parallel_alg(e):
-    adj_matrix, max_degree, min_degree = compute_max_degree(e)
+    adj_csr, max_degree, min_degree = compute_max_degree(e)
     print(f"max degree: {max_degree}")
-    adj_csr = csr_matrix(adj_matrix)
     row_offsets, col_indices = adj_csr.indptr, adj_csr.indices
     W_global = [i for i in range(len(e))]  # uncolored vertices
     color = 0
@@ -358,6 +363,7 @@ def graph_coloring(e, algorithm):
     c_v = func[algorithm](e)
     print("check validity:", check_validity(e, c_v))
     return c_v
+
 
 if __name__ == "__main__":
     """

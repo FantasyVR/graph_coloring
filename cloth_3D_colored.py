@@ -1,8 +1,9 @@
 import taichi as ti
-import numpy as np 
+import numpy as np
+import time
 
 ti.init(arch=ti.vulkan)
-N = 200
+N = 10
 NV = (N + 1)**2
 NT = 2 * N**2
 NE = 2 * N * (N + 1) + N**2
@@ -29,7 +30,7 @@ def init_pos():
         pos[idx] = ti.Vector([i / N, 0.5, j / N])
         inv_mass[idx] = 1.0
     inv_mass[N] = 0.0
-    inv_mass[NV-1] = 0.0
+    inv_mass[NV - 1] = 0.0
 
 
 @ti.kernel
@@ -87,9 +88,10 @@ def semi_euler():
             old_pos[i] = pos[i]
             pos[i] += h * vel[i]
 
-@ti.func 
+
+@ti.func
 def solve_colored_constraints(color: ti.i32):
-    for i in range(NE): # solve the same color constraints in parallel
+    for i in range(NE):  # solve the same color constraints in parallel
         if color_idx[i] == color:
             idx0, idx1 = edge[i]
             invM0, invM1 = inv_mass[idx0], inv_mass[idx1]
@@ -102,11 +104,13 @@ def solve_colored_constraints(color: ti.i32):
             if invM1 != 0.0:
                 pos[idx1] -= 0.5 * invM1 * l * gradient
 
+
 @ti.kernel
 def solve_constraints():
     ti.loop_config(serialize=True)
     for c in range(num_colors):
         solve_colored_constraints(c)
+
 
 @ti.kernel
 def update_vel():
@@ -114,11 +118,13 @@ def update_vel():
         if inv_mass[i] != 0.0:
             vel[i] = (pos[i] - old_pos[i]) / h
 
-@ti.kernel 
+
+@ti.kernel
 def collision():
     for i in range(NV):
         if pos[i][2] < -2.0:
             pos[i][2] = 0.0
+
 
 def step():
     semi_euler()
@@ -126,6 +132,7 @@ def step():
         solve_constraints()
         collision()
     update_vel()
+
 
 def save_initial_state():
     from coloring import graph_coloring
@@ -137,7 +144,7 @@ def save_initial_state():
     global num_colors
     num_colors = np.max(c_v) - np.min(c_v) + 1
     print(f"number of colors: {num_colors}")
-    
+
     with open('data/edges.txt', 'w') as f:
         e = edge.to_numpy()
         for i in range(NE):
@@ -146,7 +153,9 @@ def save_initial_state():
     with open('data/positions.txt', 'w') as f:
         p = pos.to_numpy()
         for i in range(NV):
-            f.write(str(p[i][0]) + ' ' + str(p[i][1]) + ' ' + str(p[i][2]) + '\n')
+            f.write(
+                str(p[i][0]) + ' ' + str(p[i][1]) + ' ' + str(p[i][2]) + '\n')
+
 
 init_pos()
 init_tri()
@@ -154,7 +163,7 @@ init_edge()
 save_initial_state()
 print('initial state saved')
 
-window = ti.ui.Window("Display Mesh", (1024, 1024))
+window = ti.ui.Window("Display Mesh", (1024, 1024), show_window=False)
 canvas = window.get_canvas()
 scene = ti.ui.Scene()
 camera = ti.ui.make_camera()
@@ -163,14 +172,22 @@ camera.lookat(0.5, 0.5, 0.0)
 camera.fov(90)
 
 paused[None] = 1
+frame = 0
+sum_time = 0
 while window.running:
-    for e in window.get_events(ti.ui.PRESS):
-        if e.key in [ti.ui.ESCAPE]:
-            exit()
-    if window.is_pressed(ti.ui.SPACE):
-        paused[None] = not paused[None]
+    # for e in window.get_events(ti.ui.PRESS):
+    #     if e.key in [ti.ui.ESCAPE]:
+    #         exit()
+    # if window.is_pressed(ti.ui.SPACE):
+    #     paused[None] = not paused[None]
 
+    if frame > 0:
+        start = time.time()
     step()
+    if frame > 0:
+        end = time.time()
+        sum_time += end - start
+    frame += 1
     # if not paused[None]:
     #     step()
     #     paused[None] = not paused[None]
@@ -179,7 +196,11 @@ while window.running:
     scene.set_camera(camera)
     scene.point_light(pos=(0.5, 1, 2), color=(1, 1, 1))
 
-    scene.mesh(pos, tri, color=(1.0,1.0,1.0), two_sided=True)
-    scene.particles(pos, radius=0.01, color=(0.6,0.0,0.0))
+    scene.mesh(pos, tri, color=(1.0, 1.0, 1.0), two_sided=True)
+    scene.particles(pos, radius=0.01, color=(0.6, 0.0, 0.0))
     canvas.scene(scene)
-    window.show()
+    # window.show()
+    if frame > 100:
+        break
+
+print(f"number of frames:{frame} \naverage time: {sum_time / (frame - 1)}")
