@@ -361,7 +361,7 @@ def graph_coloring(e, algorithm):
         monte_carlo_coloring, luby_coloring, check_validity
     ]
     c_v = func[algorithm](e)
-    print("check validity:", check_validity(e, c_v))
+    # print("check validity:", check_validity(e, c_v))
     return c_v
 
 
